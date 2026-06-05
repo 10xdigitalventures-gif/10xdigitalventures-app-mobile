@@ -1,0 +1,58 @@
+{
+  "expo": {
+    "name": "10x Chat",
+    "slug": "10x-chat",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0f1117"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tenxdigitalventures.chat",
+      "buildNumber": "1"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0f1117"
+      },
+      "package": "com.tenxdigitalventures.chat",
+      "versionCode": 1,
+      "permissions": [
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "CAMERA",
+        "RECORD_AUDIO",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
+      ]
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#1db791"
+        }
+      ]
+    ],
+    "scheme": "tenxchat",
+    "extra": {
+      "apiUrl": "https://api.10xdigitalventures.com/api",
+      "socketUrl": "https://api.10xdigitalventures.com",
+      "eas": {
+        "projectId": "6872b78b-0888-466d-a60d-123456789abc"
+      }
+    }
+  }
+}
