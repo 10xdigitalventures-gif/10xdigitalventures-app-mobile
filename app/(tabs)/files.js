@@ -47,7 +47,7 @@ export default function FilesScreen() {
         <Text style={styles.headerSub}>{files.length} files shared</Text>
       </View>
       {loading ? (
-        <View style={styles.center}><ActivityIndicator color="#185FA5" size="large" /></View>
+        <View style={styles.center}><ActivityIndicator color="#1db791" size="large" /></View>
       ) : (
         <FlatList
           data={files}
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
   fileInfo: { flex: 1 },
   fileName: { fontSize: 15, color: '#e8eaed', fontWeight: '500' },
   fileMeta: { fontSize: 12, color: '#6b7280', marginTop: 3 },
-  downloadIcon: { fontSize: 18, color: '#185FA5' },
+  downloadIcon: { fontSize: 18, color: '#1db791' },
   empty: { alignItems: 'center', paddingTop: 80 },
   emptyText: { color: '#9ca3af', fontSize: 16, fontWeight: '500' },
   emptySubText: { color: '#6b7280', fontSize: 13, marginTop: 4 },

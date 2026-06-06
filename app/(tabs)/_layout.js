@@ -1,24 +1,19 @@
 import { Tabs } from 'expo-router'
-import { View, Text } from 'react-native'
 import { useEffect } from 'react'
 import * as SecureStore from 'expo-secure-store'
 import { useRouter } from 'expo-router'
 import useChatStore from '@/store/chatStore'
 import { getSocket, disconnectSocket } from '@/lib/socket'
 import api from '@/lib/api'
-
-function TabIcon({ name, focused }) {
-  const icons = { channels: '#', dms: '✉', files: '📎', profile: '👤' }
-  return (
-    <View style={{ alignItems: 'center' }}>
-      <Text style={{ fontSize: 18, color: focused ? '#185FA5' : '#6b7280' }}>{icons[name]}</Text>
-    </View>
-  )
-}
+import { colors } from '@/lib/theme'
+import { ChatIcon, PhoneIcon, GroupIcon, SettingsIcon } from '@/components/icons'
 
 export default function TabsLayout() {
   const router = useRouter()
-  const { setUser, setChannels, addMessage, updateMessage, deleteMessage, updateReaction, setUserOnline, setUserOffline, setTyping } = useChatStore()
+  const {
+    setUser, setChannels, addChannel, addMessage, updateMessage, deleteMessage,
+    updateReaction, setUserOnline, setUserOffline, setTyping,
+  } = useChatStore()
 
   useEffect(() => {
     const init = async () => {
@@ -26,24 +21,21 @@ export default function TabsLayout() {
       if (!token) { router.replace('/(auth)/login'); return }
 
       try {
-        const [meRes, chRes] = await Promise.all([
-          api.get('/auth/me'),
-          api.get('/channels'),
-        ])
+        const [meRes, chRes] = await Promise.all([api.get('/auth/me'), api.get('/channels')])
         setUser(meRes.data?.data || meRes.data)
         setChannels(Array.isArray(chRes.data?.data) ? chRes.data.data : Array.isArray(chRes.data) ? chRes.data : [])
 
         const socket = await getSocket()
         socket.emit('join:channels')
-
         socket.on('message:new', msg => addMessage(msg.channel_id, msg))
         socket.on('message:edited', ({ message_id, channel_id, content }) => updateMessage(channel_id, message_id, { content, is_edited: 1 }))
         socket.on('message:deleted', ({ message_id, channel_id }) => deleteMessage(channel_id, message_id))
         socket.on('reaction:updated', ({ message_id, channel_id, emoji, user_id, action }) => updateReaction(channel_id, message_id, emoji, user_id, action))
-        socket.on('user:online', ({ user_id }) => setUserOnline(user_id))
+        socket.on('user:online',  ({ user_id }) => setUserOnline(user_id))
         socket.on('user:offline', ({ user_id }) => setUserOffline(user_id))
         socket.on('typing:start', ({ user_id, channel_id }) => setTyping(channel_id, user_id, true))
-        socket.on('typing:stop', ({ user_id, channel_id }) => setTyping(channel_id, user_id, false))
+        socket.on('typing:stop',  ({ user_id, channel_id }) => setTyping(channel_id, user_id, false))
+        socket.on('channel:new',  (ch) => { addChannel(ch); socket.emit('join:channels') })
       } catch {
         router.replace('/(auth)/login')
       }
@@ -55,15 +47,17 @@ export default function TabsLayout() {
   return (
     <Tabs screenOptions={{
       headerShown: false,
-      tabBarStyle: { backgroundColor: '#12141a', borderTopColor: '#2a2d35', borderTopWidth: 0.5 },
-      tabBarActiveTintColor: '#185FA5',
-      tabBarInactiveTintColor: '#6b7280',
-      tabBarLabelStyle: { fontSize: 11 },
+      tabBarStyle: { backgroundColor: colors.bgSurface, borderTopColor: colors.bgDivider, borderTopWidth: 0.5, height: 60, paddingTop: 6, paddingBottom: 8 },
+      tabBarActiveTintColor: colors.brand,
+      tabBarInactiveTintColor: colors.textSecondary,
+      tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
     }}>
-      <Tabs.Screen name="channels" options={{ title: 'Channels', tabBarIcon: ({ focused }) => <TabIcon name="channels" focused={focused} /> }} />
-      <Tabs.Screen name="dms" options={{ title: 'Messages', tabBarIcon: ({ focused }) => <TabIcon name="dms" focused={focused} /> }} />
-      <Tabs.Screen name="files" options={{ title: 'Files', tabBarIcon: ({ focused }) => <TabIcon name="files" focused={focused} /> }} />
-      <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: ({ focused }) => <TabIcon name="profile" focused={focused} /> }} />
+      <Tabs.Screen name="channels" options={{ title: 'Chats',    tabBarIcon: ({ color }) => <ChatIcon     size={24} color={color} /> }} />
+      <Tabs.Screen name="calls"    options={{ title: 'Calls',    tabBarIcon: ({ color }) => <PhoneIcon    size={24} color={color} /> }} />
+      <Tabs.Screen name="dms"      options={{ title: 'Direct',   tabBarIcon: ({ color }) => <GroupIcon    size={24} color={color} /> }} />
+      <Tabs.Screen name="profile"  options={{ title: 'Settings', tabBarIcon: ({ color }) => <SettingsIcon size={24} color={color} /> }} />
+      {/* Hide the files tab from bottom bar; it is reachable from chat header */}
+      <Tabs.Screen name="files"    options={{ href: null }} />
     </Tabs>
   )
 }

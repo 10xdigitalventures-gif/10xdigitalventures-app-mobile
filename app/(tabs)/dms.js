@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
   header: { padding: 16, paddingTop: 56, borderBottomWidth: 0.5, borderBottomColor: '#2a2d35', backgroundColor: '#12141a' },
   headerTitle: { fontSize: 17, fontWeight: '700', color: '#fff' },
   dmItem: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12, borderBottomWidth: 0.5, borderBottomColor: '#1e2028' },
-  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#185FA5', justifyContent: 'center', alignItems: 'center', position: 'relative' },
+  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#1db791', justifyContent: 'center', alignItems: 'center', position: 'relative' },
   avatarText: { color: '#fff', fontSize: 18, fontWeight: '600' },
   onlineDot: { position: 'absolute', bottom: 0, right: 0, width: 12, height: 12, borderRadius: 6, backgroundColor: '#22c55e', borderWidth: 2, borderColor: '#0f1117' },
   dmInfo: { flex: 1 },
