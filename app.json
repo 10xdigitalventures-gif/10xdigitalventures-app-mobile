@@ -51,8 +51,10 @@
       "apiUrl": "https://api.10xdigitalventures.com/api",
       "socketUrl": "https://api.10xdigitalventures.com",
       "eas": {
-        "projectId": "6872b78b-0888-466d-a60d-123456789abc"
-      }
-    }
+        "projectId": "d092426e-5c90-4df6-94bb-5c7ad313cb61"
+      },
+      "router": {}
+    },
+    "owner": "abaanshujats-organization"
   }
 }
