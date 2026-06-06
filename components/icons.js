@@ -99,3 +99,103 @@ export const LogoutIcon = ({ size = 20, color }) => (
     <Line x1={21} y1={12} x2={9} y2={12} stroke={stroke(color)} strokeWidth={2} strokeLinecap="round"/>
   </Svg>
 )
+
+// ============================================================
+// Call screen icons (added in Phase 2.1)
+// ============================================================
+export const MicIcon = ({ size = 24, color }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" stroke={stroke(color)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+    <Path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke={stroke(color)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+    <Line x1={12} y1={19} x2={12} y2={23} stroke={stroke(color)} strokeWidth={2} strokeLinecap="round"/>
+  </Svg>
+)
+export const MicOffIcon = ({ size = 24, color }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Line x1={1} y1={1} x2={23} y2={23} stroke={stroke(color)} strokeWidth={2} strokeLinecap="round"/>
+    <Path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" stroke={stroke(color)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+    <Path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23" stroke={stroke(color)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+    <Line x1={12} y1={19} x2={12} y2={23} stroke={stroke(color)} strokeWidth={2} strokeLinecap="round"/>
+  </Svg>
+)
+export const SpeakerIcon = ({ size = 24, color }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" stroke={stroke(color)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+    <Path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke={stroke(color)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+    <Path d="M19.07 4.93a10 10 0 0 1 0 14.14" stroke={stroke(color)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+  </Svg>
+)
+export const SpeakerOffIcon = ({ size = 24, color }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" stroke={stroke(color)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+    <Line x1={23} y1={9} x2={17} y2={15} stroke={stroke(color)} strokeWidth={2} strokeLinecap="round"/>
+    <Line x1={17} y1={9} x2={23} y2={15} stroke={stroke(color)} strokeWidth={2} strokeLinecap="round"/>
+  </Svg>
+)
+export const CameraOnIcon = ({ size = 24, color }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Polygon points="23 7 16 12 23 17 23 7" stroke={stroke(color)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+    <Rect x={1} y={5} width={15} height={14} rx={2} stroke={stroke(color)} strokeWidth={2}/>
+  </Svg>
+)
+export const CameraOffIcon = ({ size = 24, color }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Line x1={1} y1={1} x2={23} y2={23} stroke={stroke(color)} strokeWidth={2} strokeLinecap="round"/>
+    <Path d="M16 16H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m4 0h6a2 2 0 0 1 2 2v.34m1.66 1.66L23 7v10" stroke={stroke(color)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+  </Svg>
+)
+export const FlipCameraIcon = ({ size = 24, color }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M20 19a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3.17l-1.84-2H9.01L7.17 6H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h6.59" stroke={stroke(color)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+    <Path d="M14 16h4v4" stroke={stroke(color)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+    <Path d="M18 16a4.5 4.5 0 0 1-7 1" stroke={stroke(color)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+    <Circle cx={11.5} cy={12.5} r={2.5} stroke={stroke(color)} strokeWidth={2}/>
+  </Svg>
+)
+export const EndCallIcon = ({ size = 26, color }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 8.63 19.24" stroke={stroke(color)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+    <Line x1={23} y1={1} x2={1} y2={23} stroke={stroke(color)} strokeWidth={2} strokeLinecap="round"/>
+  </Svg>
+)
+export const AcceptCallIcon = ({ size = 26, color }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" stroke={stroke(color)} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"/>
+  </Svg>
+)
+export const CloseIcon = ({ size = 22, color }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Line x1={18} y1={6} x2={6} y2={18} stroke={stroke(color)} strokeWidth={2.2} strokeLinecap="round"/>
+    <Line x1={6} y1={6} x2={18} y2={18} stroke={stroke(color)} strokeWidth={2.2} strokeLinecap="round"/>
+  </Svg>
+)
+export const LockIcon = ({ size = 13, color }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Rect x={3} y={11} width={18} height={11} rx={2} ry={2} stroke={stroke(color)} strokeWidth={2}/>
+    <Path d="M7 11V7a5 5 0 0 1 10 0v4" stroke={stroke(color)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+  </Svg>
+)
+export const PhoneOutIcon = ({ size = 18, color }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" stroke={stroke(color)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+    <Path d="M16 2l5 5M21 2l-5 5" stroke={stroke(color)} strokeWidth={2} strokeLinecap="round"/>
+  </Svg>
+)
+export const PhoneInIcon = ({ size = 18, color }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" stroke={stroke(color)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+    <Path d="M15 4l5 5M20 4v5h-5" stroke={stroke(color)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+  </Svg>
+)
+export const PhoneMissedIcon = ({ size = 18, color }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" stroke={stroke(color)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+    <Line x1={22} y1={2} x2={16} y2={8} stroke={stroke(color)} strokeWidth={2} strokeLinecap="round"/>
+    <Line x1={16} y1={2} x2={22} y2={8} stroke={stroke(color)} strokeWidth={2} strokeLinecap="round"/>
+  </Svg>
+)
+export const MessageIcon = ({ size = 22, color }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke={stroke(color)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+  </Svg>
+)

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet, Modal, Platform, Alert } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet, Modal, Platform, Alert, Animated, Easing } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
   RTCPeerConnection, RTCSessionDescription, RTCIceCandidate,
@@ -10,7 +10,12 @@ import { getSocket } from '@/lib/socket'
 import { requestCallPermissions } from '@/lib/permissions'
 import useChatStore from '@/store/chatStore'
 import { colors } from '@/lib/theme'
-import { PhoneIcon, VideoIcon } from '@/components/icons'
+import {
+  MicIcon, MicOffIcon, SpeakerIcon, SpeakerOffIcon,
+  CameraOnIcon, CameraOffIcon, FlipCameraIcon,
+  EndCallIcon, AcceptCallIcon, CloseIcon, LockIcon,
+  MessageIcon, PhoneIcon, VideoIcon,
+} from '@/components/icons'
 import api from '@/lib/api'
 
 const ICE = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] }
@@ -264,51 +269,92 @@ export function CallProvider({ children }) {
 // ============================================================
 // WhatsApp-style modal (mobile)
 // ============================================================
-function CtrlBtn({ title, variant, onPress, children }) {
-  const variants = {
-    mute:     { bg: 'rgba(255,255,255,0.1)', icon: '#fff' },
-    muted:    { bg: '#fff', icon: '#0b141a' },
-    speaker:  { bg: 'rgba(255,255,255,0.1)', icon: '#fff' },
-    speakerOn:{ bg: '#fff', icon: '#0b141a' },
-    cam:      { bg: 'rgba(255,255,255,0.1)', icon: '#fff' },
-    camOff:   { bg: '#fff', icon: '#0b141a' },
-    flip:     { bg: 'rgba(255,255,255,0.1)', icon: '#fff' },
-    accept:   { bg: '#1db791', icon: '#fff' },
-    end:      { bg: '#f15c6d', icon: '#fff' },
-    decline:  { bg: '#f15c6d', icon: '#fff' },
-  }
-  const v = variants[variant] || variants.mute
-  return (
-    <TouchableOpacity onPress={onPress} style={callStyles.ctrlWrap} activeOpacity={0.7}>
-      <View style={[callStyles.ctrlBtn, { backgroundColor: v.bg }]}>{children(v.icon)}</View>
-      <Text style={callStyles.ctrlLabel}>{title}</Text>
-    </TouchableOpacity>
-  )
-}
+
+// ============================================================
+// Phase 2.1: WhatsApp-style modal with SVG icons + pulse ring
+// ============================================================
 
 function getInitials(name) {
   if (!name) return '?'
-  return name.split(/\s+/).slice(0,2).map(p => p[0]).join('').toUpperCase()
+  return name.split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase()
 }
-
 function fmtDur(s) {
   if (!s) return ''
-  const m = Math.floor(s/60), sec = s%60
-  return m + ':' + String(sec).padStart(2,'0')
+  const m = Math.floor(s / 60), sec = s % 60
+  return m + ':' + String(sec).padStart(2, '0')
+}
+
+function PulseAvatar({ name, pulsing }) {
+  const scale = useRef(new Animated.Value(1)).current
+  const opacity = useRef(new Animated.Value(0.5)).current
+  useEffect(() => {
+    if (!pulsing) return
+    const loop = Animated.loop(Animated.parallel([
+      Animated.sequence([
+        Animated.timing(scale,   { toValue: 1.45, duration: 1300, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+        Animated.timing(scale,   { toValue: 1,    duration: 0,    useNativeDriver: true }),
+      ]),
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 0,    duration: 1300, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.5, duration: 0,    useNativeDriver: true }),
+      ]),
+    ]))
+    loop.start()
+    return () => loop.stop()
+  }, [pulsing])
+  return (
+    <View style={{ alignItems: 'center', justifyContent: 'center', width: 160, height: 160 }}>
+      {pulsing && (
+        <Animated.View style={{ position: 'absolute', width: 130, height: 130, borderRadius: 65, backgroundColor: '#1db791', transform: [{ scale }], opacity }} />
+      )}
+      <View style={callStyles.bigAvatar}>
+        <Text style={callStyles.bigInitials}>{getInitials(name)}</Text>
+      </View>
+    </View>
+  )
+}
+
+function CtrlBtn({ label, variant, onPress, children }) {
+  // variant: 'mute' | 'muted' | 'speaker' | 'speakerOn' | 'cam' | 'camOff' | 'flip' | 'accept' | 'decline' | 'end' | 'neutral'
+  const styles = {
+    mute:      { bg: 'rgba(255,255,255,0.12)', icon: '#fff' },
+    muted:     { bg: '#fff',                   icon: '#0b141a' },
+    speaker:   { bg: 'rgba(255,255,255,0.12)', icon: '#fff' },
+    speakerOn: { bg: '#fff',                   icon: '#0b141a' },
+    cam:       { bg: 'rgba(255,255,255,0.12)', icon: '#fff' },
+    camOff:    { bg: '#fff',                   icon: '#0b141a' },
+    flip:      { bg: 'rgba(255,255,255,0.12)', icon: '#fff' },
+    accept:    { bg: '#1db791',                icon: '#fff' },
+    decline:   { bg: '#f15c6d',                icon: '#fff' },
+    end:       { bg: '#f15c6d',                icon: '#fff' },
+    neutral:   { bg: 'rgba(255,255,255,0.12)', icon: '#fff' },
+  }
+  const v = styles[variant] || styles.neutral
+  return (
+    <TouchableOpacity onPress={onPress} style={callStyles.ctrlWrap} activeOpacity={0.7}>
+      <View style={[callStyles.ctrlBtn, { backgroundColor: v.bg }]}>
+        {typeof children === 'function' ? children(v.icon) : children}
+      </View>
+      <Text style={callStyles.ctrlLabel}>{label}</Text>
+    </TouchableOpacity>
+  )
 }
 
 function CallModal() {
   const c = useCall()
   if (!c || c.state === 'idle') return null
-  const { state, callType, peer, muted, camOff, speakerOn, localStream, remoteStream,
-          endReason, duration,
-          acceptCall, rejectCall, endCall, toggleMute, toggleCam, toggleSpeaker, switchCamera,
-          dismissEnded } = c
+  const {
+    state, callType, peer, muted, camOff, speakerOn, localStream, remoteStream,
+    endReason, duration,
+    acceptCall, rejectCall, endCall, toggleMute, toggleCam, toggleSpeaker, switchCamera,
+    dismissEnded, findDMChannelWith,
+  } = c
 
   const isVideo = callType === 'video'
   const showStage = state === 'active' && isVideo && remoteStream
+  const isPulsing = state === 'calling' || state === 'ringing'
 
-  // ---- Ended screen ----
+  // ---------- ENDED ----------
   if (state === 'ended') {
     const label = endReason === 'declined'  ? 'Call declined'
                 : endReason === 'no_answer' ? 'No answer'
@@ -320,17 +366,33 @@ function CallModal() {
         <SafeAreaView style={callStyles.backdrop}>
           <View style={callStyles.card}>
             <View style={callStyles.headerBar}>
-              <Text style={callStyles.headerText}>End-to-end encrypted</Text>
-              <TouchableOpacity onPress={dismissEnded}><Text style={callStyles.headerClose}>X</Text></TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <LockIcon size={12} color={'rgba(255,255,255,0.7)'} />
+                <Text style={callStyles.headerText}>End-to-end encrypted</Text>
+              </View>
+              <TouchableOpacity onPress={dismissEnded}><CloseIcon size={20} color={'rgba(255,255,255,0.7)'} /></TouchableOpacity>
             </View>
+
             <View style={callStyles.bigSection}>
-              <View style={callStyles.bigAvatar}><Text style={callStyles.bigInitials}>{getInitials(peer?.name)}</Text></View>
+              <PulseAvatar name={peer?.name} pulsing={false} />
               <Text style={callStyles.bigName}>{peer?.name || 'Unknown'}</Text>
               <Text style={callStyles.status}>{label}</Text>
             </View>
+
             <View style={callStyles.controlsRow}>
-              <CtrlBtn title="Close" variant="end" onPress={dismissEnded}>
-                {(c) => <Text style={{ color: c, fontSize: 22, fontWeight: '700' }}>X</Text>}
+              <CtrlBtn label="Message" variant="neutral" onPress={dismissEnded}>
+                {(ic) => <MessageIcon size={22} color={ic} />}
+              </CtrlBtn>
+              <CtrlBtn label="Call again" variant="accept" onPress={() => {
+                const t = callType
+                const p = peer
+                dismissEnded()
+                if (p?.id) setTimeout(() => c.startCall(p.id, p.name, t), 150)
+              }}>
+                {(ic) => <AcceptCallIcon size={24} color={ic} />}
+              </CtrlBtn>
+              <CtrlBtn label="Close" variant="neutral" onPress={dismissEnded}>
+                {(ic) => <CloseIcon size={22} color={ic} />}
               </CtrlBtn>
             </View>
           </View>
@@ -339,7 +401,7 @@ function CallModal() {
     )
   }
 
-  // ---- Active / ringing / calling screen ----
+  // ---------- ACTIVE / CALLING / RINGING ----------
   const statusText = state === 'calling' ? 'Calling...'
                    : state === 'ringing' ? ('Incoming ' + (isVideo ? 'video' : 'voice') + ' call')
                    : 'Connected'
@@ -349,7 +411,10 @@ function CallModal() {
       <SafeAreaView style={callStyles.backdrop}>
         <View style={callStyles.card}>
           <View style={callStyles.headerBar}>
-            <Text style={callStyles.headerText}>End-to-end encrypted</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <LockIcon size={12} color={'rgba(255,255,255,0.7)'} />
+              <Text style={callStyles.headerText}>End-to-end encrypted</Text>
+            </View>
             <Text style={callStyles.headerType}>{isVideo ? 'Video' : 'Voice'}</Text>
           </View>
 
@@ -368,7 +433,7 @@ function CallModal() {
             </View>
           ) : (
             <View style={callStyles.bigSection}>
-              <View style={callStyles.bigAvatar}><Text style={callStyles.bigInitials}>{getInitials(peer?.name)}</Text></View>
+              <PulseAvatar name={peer?.name} pulsing={isPulsing} />
               <Text style={callStyles.bigName}>{peer?.name || 'Unknown'}</Text>
               <Text style={callStyles.status}>{statusText}</Text>
             </View>
@@ -377,35 +442,35 @@ function CallModal() {
           <View style={callStyles.controlsRow}>
             {state === 'ringing' ? (
               <>
-                <CtrlBtn title="Decline" variant="decline" onPress={rejectCall}>
-                  {(c) => <Text style={{ color: c, fontSize: 24 }}>X</Text>}
+                <CtrlBtn label="Decline" variant="decline" onPress={rejectCall}>
+                  {(ic) => <EndCallIcon size={24} color={ic} />}
                 </CtrlBtn>
-                <CtrlBtn title="Accept" variant="accept" onPress={acceptCall}>
-                  {(c) => <Text style={{ color: c, fontSize: 22 }}>OK</Text>}
+                <CtrlBtn label="Accept" variant="accept" onPress={acceptCall}>
+                  {(ic) => <AcceptCallIcon size={24} color={ic} />}
                 </CtrlBtn>
               </>
             ) : (
               <>
-                <CtrlBtn title={muted ? 'Unmute' : 'Mute'} variant={muted ? 'muted' : 'mute'} onPress={toggleMute}>
-                  {(c) => <Text style={{ color: c, fontSize: 14, fontWeight: '700' }}>{muted ? 'OFF' : 'MIC'}</Text>}
+                <CtrlBtn label={muted ? 'Unmute' : 'Mute'} variant={muted ? 'muted' : 'mute'} onPress={toggleMute}>
+                  {(ic) => muted ? <MicOffIcon size={22} color={ic} /> : <MicIcon size={22} color={ic} />}
                 </CtrlBtn>
                 {!isVideo && (
-                  <CtrlBtn title="Speaker" variant={speakerOn ? 'speakerOn' : 'speaker'} onPress={toggleSpeaker}>
-                    {(c) => <Text style={{ color: c, fontSize: 14, fontWeight: '700' }}>SPK</Text>}
+                  <CtrlBtn label="Speaker" variant={speakerOn ? 'speakerOn' : 'speaker'} onPress={toggleSpeaker}>
+                    {(ic) => speakerOn ? <SpeakerIcon size={22} color={ic} /> : <SpeakerOffIcon size={22} color={ic} />}
                   </CtrlBtn>
                 )}
                 {isVideo && (
-                  <CtrlBtn title={camOff ? 'Camera on' : 'Camera off'} variant={camOff ? 'camOff' : 'cam'} onPress={toggleCam}>
-                    {(c) => <Text style={{ color: c, fontSize: 14, fontWeight: '700' }}>CAM</Text>}
+                  <CtrlBtn label={camOff ? 'Camera on' : 'Camera off'} variant={camOff ? 'camOff' : 'cam'} onPress={toggleCam}>
+                    {(ic) => camOff ? <CameraOffIcon size={22} color={ic} /> : <CameraOnIcon size={22} color={ic} />}
                   </CtrlBtn>
                 )}
                 {isVideo && (
-                  <CtrlBtn title="Flip" variant="flip" onPress={switchCamera}>
-                    {(c) => <Text style={{ color: c, fontSize: 14, fontWeight: '700' }}>FLP</Text>}
+                  <CtrlBtn label="Flip" variant="flip" onPress={switchCamera}>
+                    {(ic) => <FlipCameraIcon size={22} color={ic} />}
                   </CtrlBtn>
                 )}
-                <CtrlBtn title="End" variant="end" onPress={() => endCall(true)}>
-                  {(c) => <Text style={{ color: c, fontSize: 22, fontWeight: '700' }}>X</Text>}
+                <CtrlBtn label="End" variant="end" onPress={() => endCall(true)}>
+                  {(ic) => <EndCallIcon size={24} color={ic} />}
                 </CtrlBtn>
               </>
             )}
@@ -422,22 +487,21 @@ const callStyles = StyleSheet.create({
   headerBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, backgroundColor: '#111b21', borderBottomWidth: 0.5, borderBottomColor: 'rgba(255,255,255,0.06)' },
   headerText: { color: 'rgba(255,255,255,0.7)', fontSize: 12 },
   headerType: { color: 'rgba(255,255,255,0.4)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 },
-  headerClose: { color: 'rgba(255,255,255,0.7)', fontSize: 16, paddingHorizontal: 6 },
 
-  bigSection: { alignItems: 'center', paddingVertical: 48, paddingHorizontal: 24, backgroundColor: '#0b141a' },
-  bigAvatar: { width: 130, height: 130, borderRadius: 65, backgroundColor: '#1db791', alignItems: 'center', justifyContent: 'center', marginBottom: 22 },
+  bigSection: { alignItems: 'center', paddingVertical: 36, paddingHorizontal: 24, backgroundColor: '#0b141a' },
+  bigAvatar: { width: 130, height: 130, borderRadius: 65, backgroundColor: '#1db791', alignItems: 'center', justifyContent: 'center' },
   bigInitials: { color: '#06291f', fontSize: 42, fontWeight: '700' },
-  bigName: { color: '#fff', fontSize: 22, fontWeight: '600', marginBottom: 6 },
+  bigName: { color: '#fff', fontSize: 22, fontWeight: '600', marginTop: 18, marginBottom: 6 },
   status: { color: 'rgba(255,255,255,0.55)', fontSize: 14 },
 
-  videoStage: { width: '100%', aspectRatio: 9/14, maxHeight: 520, backgroundColor: '#000', position: 'relative' },
+  videoStage: { width: '100%', aspectRatio: 9/14, maxHeight: 540, backgroundColor: '#000', position: 'relative' },
   remoteVideo: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   localPip: { position: 'absolute', bottom: 12, right: 12, width: 100, height: 140, borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', backgroundColor: '#000' },
   stageHeader: { position: 'absolute', top: 12, left: 14, right: 14 },
   bigNameOnVideo: { color: '#fff', fontSize: 16, fontWeight: '600' },
   statusOnVideo: { color: 'rgba(255,255,255,0.85)', fontSize: 12 },
 
-  controlsRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-start', gap: 16, paddingTop: 18, paddingBottom: 26, paddingHorizontal: 12, backgroundColor: '#0a1218', borderTopWidth: 0.5, borderTopColor: 'rgba(255,255,255,0.06)' },
+  controlsRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-start', gap: 14, paddingTop: 18, paddingBottom: 26, paddingHorizontal: 12, backgroundColor: '#0a1218', borderTopWidth: 0.5, borderTopColor: 'rgba(255,255,255,0.06)' },
   ctrlWrap: { alignItems: 'center', gap: 7 },
   ctrlBtn: { width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center' },
   ctrlLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 11 },

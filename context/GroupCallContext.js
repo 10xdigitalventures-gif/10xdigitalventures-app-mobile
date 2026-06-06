@@ -6,6 +6,11 @@ import InCallManager from 'react-native-incall-manager'
 import { getSocket } from '@/lib/socket'
 import { requestCallPermissions } from '@/lib/permissions'
 import useChatStore from '@/store/chatStore'
+import {
+  MicIcon, MicOffIcon, SpeakerIcon, SpeakerOffIcon,
+  CameraOnIcon, CameraOffIcon,
+  EndCallIcon, AcceptCallIcon, CloseIcon, LockIcon,
+} from '@/components/icons'
 
 const ICE = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] }
 const MAX_PEERS = 8
@@ -218,7 +223,10 @@ function RingModal() {
       <SafeAreaView style={s.backdrop}>
         <View style={s.card}>
           <View style={s.headerBar}>
-            <Text style={s.headerText}>End-to-end encrypted</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <LockIcon size={12} color={'rgba(255,255,255,0.7)'} />
+              <Text style={s.headerText}>End-to-end encrypted</Text>
+            </View>
             <Text style={s.headerType}>{incoming.type === 'video' ? 'Group video' : 'Group voice'}</Text>
           </View>
           <View style={s.bigSection}>
@@ -227,12 +235,18 @@ function RingModal() {
             <Text style={s.status}>{incoming.fromName} is calling...</Text>
           </View>
           <View style={s.controlsRow}>
-            <TouchableOpacity onPress={declineIncoming} style={[s.ctrlBtn, { backgroundColor: '#f15c6d' }]}>
-              <Text style={{ color: '#fff', fontWeight: '700' }}>NO</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={acceptIncoming} style={[s.ctrlBtn, { backgroundColor: '#1db791' }]}>
-              <Text style={{ color: '#fff', fontWeight: '700' }}>OK</Text>
-            </TouchableOpacity>
+            <View style={{ alignItems: 'center', gap: 6 }}>
+              <TouchableOpacity onPress={declineIncoming} style={[s.ctrlBtn, { backgroundColor: '#f15c6d' }]}>
+                <EndCallIcon size={24} color="#fff" />
+              </TouchableOpacity>
+              <Text style={s.ctrlLabel}>Decline</Text>
+            </View>
+            <View style={{ alignItems: 'center', gap: 6 }}>
+              <TouchableOpacity onPress={acceptIncoming} style={[s.ctrlBtn, { backgroundColor: '#1db791' }]}>
+                <AcceptCallIcon size={24} color="#fff" />
+              </TouchableOpacity>
+              <Text style={s.ctrlLabel}>Accept</Text>
+            </View>
           </View>
         </View>
       </SafeAreaView>
@@ -248,7 +262,9 @@ function PeerTile({ peer }) {
         ? <RTCView streamURL={peer.stream.toURL()} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} objectFit="cover" />
         : <View style={s.tileAvatar}><Text style={s.tileInitials}>{getInitials(peer.name)}</Text></View>}
       <View style={s.tileLabel}><Text style={{ color: '#fff', fontSize: 12 }}>{peer.name}</Text></View>
-      {peer.muted && <View style={s.muteBadge}><Text style={{ color: '#f87171', fontSize: 10 }}>MUTED</Text></View>}
+      {peer.muted && (
+        <View style={s.muteBadge}><MicOffIcon size={12} color="#f87171" /></View>
+      )}
     </View>
   )
 }
@@ -263,39 +279,68 @@ function ActiveModal() {
     <Modal visible animationType="fade">
       <SafeAreaView style={[s.backdrop, { paddingHorizontal: 0 }]}>
         <View style={s.headerBar}>
-          <Text style={s.headerText}>End-to-end encrypted</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <LockIcon size={12} color={'rgba(255,255,255,0.7)'} />
+            <Text style={s.headerText}>End-to-end encrypted</Text>
+          </View>
           <View>
             <Text style={{ color: '#fff', fontWeight: '600' }} numberOfLines={1}>{channelName}</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>{callType === 'video' ? 'Video' : 'Voice'} - {total} participant{total === 1 ? '' : 's'}</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>
+              {callType === 'video' ? 'Video' : 'Voice'} - {total} participant{total === 1 ? '' : 's'}
+            </Text>
           </View>
         </View>
         <ScrollView contentContainerStyle={{ padding: 6 }} style={{ flex: 1, backgroundColor: '#000' }}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-            {/* self */}
             <View style={[s.tileWrap, { width: (100 / cols) + '%' }]}>
               <View style={s.tile}>
                 {localStream && !camOff
                   ? <RTCView streamURL={localStream.toURL()} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} objectFit="cover" mirror />
                   : <View style={s.tileAvatar}><Text style={s.tileInitials}>You</Text></View>}
                 <View style={s.tileLabel}><Text style={{ color: '#fff', fontSize: 12 }}>You</Text></View>
-                {muted && <View style={s.muteBadge}><Text style={{ color: '#f87171', fontSize: 10 }}>MUTED</Text></View>}
+                {muted && <View style={s.muteBadge}><MicOffIcon size={12} color="#f87171" /></View>}
               </View>
             </View>
             {peers.map(p => (
               <View key={p.user_id} style={[s.tileWrap, { width: (100 / cols) + '%' }]}><PeerTile peer={p} /></View>
             ))}
           </View>
-          {peers.length === 0 && <Text style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 30 }}>Waiting for others to join...</Text>}
+          {peers.length === 0 && (
+            <Text style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 30 }}>
+              Waiting for others to join...
+            </Text>
+          )}
         </ScrollView>
+
         <View style={s.controlsRow}>
-          <TouchableOpacity onPress={toggleMute} style={[s.ctrlBtn, muted && { backgroundColor: '#fff' }]}><Text style={{ color: muted ? '#0b141a' : '#fff', fontWeight: '700' }}>{muted ? 'OFF' : 'MIC'}</Text></TouchableOpacity>
+          <View style={{ alignItems: 'center', gap: 6 }}>
+            <TouchableOpacity onPress={toggleMute} style={[s.ctrlBtn, muted && { backgroundColor: '#fff' }]}>
+              {muted ? <MicOffIcon size={22} color="#0b141a" /> : <MicIcon size={22} color="#fff" />}
+            </TouchableOpacity>
+            <Text style={s.ctrlLabel}>{muted ? 'Unmute' : 'Mute'}</Text>
+          </View>
           {callType !== 'video' && (
-            <TouchableOpacity onPress={toggleSpeaker} style={[s.ctrlBtn, speakerOn && { backgroundColor: '#fff' }]}><Text style={{ color: speakerOn ? '#0b141a' : '#fff', fontWeight: '700' }}>SPK</Text></TouchableOpacity>
+            <View style={{ alignItems: 'center', gap: 6 }}>
+              <TouchableOpacity onPress={toggleSpeaker} style={[s.ctrlBtn, speakerOn && { backgroundColor: '#fff' }]}>
+                {speakerOn ? <SpeakerIcon size={22} color="#0b141a" /> : <SpeakerOffIcon size={22} color="#fff" />}
+              </TouchableOpacity>
+              <Text style={s.ctrlLabel}>Speaker</Text>
+            </View>
           )}
           {callType === 'video' && (
-            <TouchableOpacity onPress={toggleCam} style={[s.ctrlBtn, camOff && { backgroundColor: '#fff' }]}><Text style={{ color: camOff ? '#0b141a' : '#fff', fontWeight: '700' }}>CAM</Text></TouchableOpacity>
+            <View style={{ alignItems: 'center', gap: 6 }}>
+              <TouchableOpacity onPress={toggleCam} style={[s.ctrlBtn, camOff && { backgroundColor: '#fff' }]}>
+                {camOff ? <CameraOffIcon size={22} color="#0b141a" /> : <CameraOnIcon size={22} color="#fff" />}
+              </TouchableOpacity>
+              <Text style={s.ctrlLabel}>{camOff ? 'Camera on' : 'Camera off'}</Text>
+            </View>
           )}
-          <TouchableOpacity onPress={leaveCall} style={[s.ctrlBtn, { backgroundColor: '#f15c6d' }]}><Text style={{ color: '#fff', fontWeight: '700' }}>END</Text></TouchableOpacity>
+          <View style={{ alignItems: 'center', gap: 6 }}>
+            <TouchableOpacity onPress={leaveCall} style={[s.ctrlBtn, { backgroundColor: '#f15c6d' }]}>
+              <EndCallIcon size={24} color="#fff" />
+            </TouchableOpacity>
+            <Text style={s.ctrlLabel}>Leave</Text>
+          </View>
         </View>
       </SafeAreaView>
     </Modal>
@@ -308,18 +353,19 @@ const s = StyleSheet.create({
   headerBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, backgroundColor: '#111b21' },
   headerText: { color: 'rgba(255,255,255,0.7)', fontSize: 12 },
   headerType: { color: 'rgba(255,255,255,0.4)', fontSize: 11, textTransform: 'uppercase' },
-  bigSection: { alignItems: 'center', paddingVertical: 48 },
-  bigAvatar: { width: 130, height: 130, borderRadius: 65, backgroundColor: '#1db791', alignItems: 'center', justifyContent: 'center', marginBottom: 22 },
+  bigSection: { alignItems: 'center', paddingVertical: 44 },
+  bigAvatar: { width: 130, height: 130, borderRadius: 65, backgroundColor: '#1db791', alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
   bigInitials: { color: '#06291f', fontSize: 42, fontWeight: '700' },
   bigName: { color: '#fff', fontSize: 22, fontWeight: '600', marginBottom: 6 },
   status: { color: 'rgba(255,255,255,0.55)', fontSize: 14 },
-  controlsRow: { flexDirection: 'row', justifyContent: 'center', gap: 14, paddingVertical: 16, backgroundColor: '#0a1218', borderTopWidth: 0.5, borderTopColor: 'rgba(255,255,255,0.06)' },
-  ctrlBtn: { width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.1)' },
+  controlsRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-start', gap: 18, paddingVertical: 18, backgroundColor: '#0a1218', borderTopWidth: 0.5, borderTopColor: 'rgba(255,255,255,0.06)' },
+  ctrlBtn: { width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.12)' },
+  ctrlLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 11 },
 
   tileWrap: { padding: 3 },
   tile: { aspectRatio: 1, backgroundColor: '#0a1218', borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', justifyContent: 'center', alignItems: 'center' },
   tileAvatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#1db791', alignItems: 'center', justifyContent: 'center' },
   tileInitials: { color: '#06291f', fontSize: 20, fontWeight: '700' },
   tileLabel: { position: 'absolute', bottom: 6, left: 6, backgroundColor: 'rgba(0,0,0,0.5)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  muteBadge: { position: 'absolute', top: 6, right: 6, backgroundColor: 'rgba(0,0,0,0.5)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  muteBadge: { position: 'absolute', top: 6, right: 6, backgroundColor: 'rgba(0,0,0,0.5)', paddingHorizontal: 6, paddingVertical: 3, borderRadius: 4 },
 })

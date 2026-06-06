@@ -1,3 +1,155 @@
+# =====================================================================
+# Mobile App Phase 2.2: Fix permissions + Calls tab crash + history UX
+#
+# Bugs fixed:
+#   1) "Microphone is required" even when perms are granted.
+#      Root cause: requestMultiple's strict `every === GRANTED` check
+#      failed when BLUETOOTH_CONNECT was undefined/never_ask_again on
+#      older Android, or when iOS path returned different shape.
+#      Now: only the REQUIRED perms (mic, optionally camera) are
+#      strictly enforced. Bluetooth is best-effort. Also handles iOS
+#      gracefully and treats existing-granted state.
+#
+#   2) Calls tab crashes the app.
+#      Root cause: calls.js uses `const call = useCall()` but never
+#      imports useCall from '@/context/CallContext'. ReferenceError ->
+#      red screen -> APK crashes.
+#
+# Bonus UX:
+#   - Calls screen now shows "Recent" history + "Start a call" section
+#     listing your DMs and groups, with phone + video buttons on each.
+#   - Empty state is friendlier (no more "Phase 2 coming soon" text).
+#   - All rows tap-to-call with proper routing (DM -> 1:1, group ->
+#     group call).
+#   - "Pull to refresh" reloads both history and contacts.
+#
+# Run from MOBILE repo root:
+#   powershell -ExecutionPolicy Bypass -File .\mobile-phase2.2-permissions-callstab-fix.ps1
+#   (then rebuild your APK or hot-reload if you have Dev Build installed)
+# =====================================================================
+
+$ErrorActionPreference = 'Stop'
+$OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+
+function Read-FileUtf8([string]$Path) {
+    return [System.IO.File]::ReadAllText($Path, [System.Text.UTF8Encoding]::new($false))
+}
+function Write-FileUtf8NoBom([string]$Path, [string]$Content) {
+    $dir = Split-Path -Parent $Path
+    if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($Path, $Content, $utf8NoBom)
+    Write-Host "  wrote: $Path"
+}
+
+if (-not (Test-Path "package.json")) {
+    Write-Host "ERROR: Run from mobile repo root (folder with package.json)."
+    exit 1
+}
+
+Write-Host "==================================================="
+Write-Host "Mobile Phase 2.2 -- Permissions + Calls tab fix"
+Write-Host "==================================================="
+Write-Host ""
+
+# =====================================================================
+# 1) lib/permissions.js -- tolerant permission check
+# =====================================================================
+Write-Host "[1/2] Rewriting lib/permissions.js (tolerant check)..."
+
+$perms = @'
+import { Platform, PermissionsAndroid, Alert, Linking } from 'react-native'
+
+/**
+ * Request mic (always) + camera (if video) permissions for a call.
+ * Returns true if the MINIMUM required perms are granted.
+ *
+ * - Bluetooth perm is requested best-effort (some devices need it for
+ *   headset audio) but is NOT required. If user denies it, calls still
+ *   work over the regular speaker/earpiece.
+ * - On Android we also detect "never_ask_again" and prompt the user to
+ *   open settings.
+ * - On iOS the system handles permissions per-track inside getUserMedia
+ *   itself, so we just return true here and let the WebRTC layer prompt.
+ */
+export async function requestCallPermissions(needVideo) {
+  if (Platform.OS !== 'android') return true
+
+  const RESULTS = PermissionsAndroid.RESULTS
+  const PERMS = PermissionsAndroid.PERMISSIONS
+
+  // ---- 1) Mic is always required ----
+  const requiredList = [PERMS.RECORD_AUDIO]
+  if (needVideo && PERMS.CAMERA) requiredList.push(PERMS.CAMERA)
+
+  let result = {}
+  try {
+    result = await PermissionsAndroid.requestMultiple(requiredList)
+  } catch (e) {
+    console.warn('permission requestMultiple error', e)
+    return false
+  }
+
+  const blocked = []
+  const denied = []
+  for (const perm of requiredList) {
+    const v = result[perm]
+    if (v === RESULTS.GRANTED) continue
+    if (v === RESULTS.NEVER_ASK_AGAIN) blocked.push(perm)
+    else denied.push(perm)
+  }
+
+  // ---- 2) Bluetooth connect (best-effort, only Android 12+) ----
+  // Fire-and-forget; do NOT block the call decision on this.
+  if (PERMS.BLUETOOTH_CONNECT) {
+    PermissionsAndroid.request(PERMS.BLUETOOTH_CONNECT).catch(() => {})
+  }
+
+  if (blocked.length > 0) {
+    // User selected "Don't ask again" earlier; have to send them to settings.
+    Alert.alert(
+      'Permission needed',
+      'Please enable Microphone' + (needVideo ? ' and Camera' : '') + ' for 10x Chat in your phone Settings.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Open Settings', onPress: () => Linking.openSettings() },
+      ]
+    )
+    return false
+  }
+
+  if (denied.length > 0) {
+    // User tapped "Deny" this time; show a soft hint, no settings link.
+    Alert.alert('Permission denied', 'Microphone access is required to make calls.')
+    return false
+  }
+
+  return true
+}
+
+/**
+ * Check (do not request) if the required perms are already granted.
+ * Useful to skip an extra prompt when accepting an incoming call.
+ */
+export async function hasCallPermissions(needVideo) {
+  if (Platform.OS !== 'android') return true
+  const PERMS = PermissionsAndroid.PERMISSIONS
+  const checks = [PermissionsAndroid.check(PERMS.RECORD_AUDIO)]
+  if (needVideo && PERMS.CAMERA) checks.push(PermissionsAndroid.check(PERMS.CAMERA))
+  const results = await Promise.all(checks).catch(() => [])
+  return results.every(Boolean)
+}
+'@
+Write-FileUtf8NoBom -Path "lib/permissions.js" -Content $perms
+
+# =====================================================================
+# 2) app/(tabs)/calls.js -- full rewrite: import useCall + safe history
+#    + Start-a-call list of contacts/groups
+# =====================================================================
+Write-Host "[2/2] Rewriting app/(tabs)/calls.js (fix crash + WA-style UX)..."
+
+$callsScreen = @'
 import { useEffect, useState, useCallback } from 'react'
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, ScrollView, Alert } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -209,3 +361,29 @@ const styles = StyleSheet.create({
   callBtn: { padding: 10 },
   divider: { height: 0.5, backgroundColor: colors.bgDivider, marginLeft: 70 },
 })
+'@
+Write-FileUtf8NoBom -Path "app/(tabs)/calls.js" -Content $callsScreen
+
+Write-Host ""
+Write-Host "================================================================="
+Write-Host "PHASE 2.2 DONE."
+Write-Host ""
+Write-Host "Bugs fixed:"
+Write-Host "  1) Permission flow tolerant -- mic + (optional) camera are"
+Write-Host "     the only blocking perms. Bluetooth is fire-and-forget."
+Write-Host "     If user blocked perms, we now offer 'Open Settings'."
+Write-Host "  2) Calls tab no longer crashes -- useCall + useGroupCall"
+Write-Host "     are properly imported. History fetch failures fall back"
+Write-Host "     to a friendly empty state."
+Write-Host ""
+Write-Host "New UX:"
+Write-Host "  - 'Recent' section shows call history with proper direction"
+Write-Host "    icons (out / in / missed)."
+Write-Host "  - 'Start a call' section lists your DMs + groups with both"
+Write-Host "    voice and video buttons on each row."
+Write-Host "  - Pull-to-refresh reloads everything."
+Write-Host ""
+Write-Host "Now rebuild & test:"
+Write-Host "  - If you have a Dev Build APK installed:  npx expo start --clear"
+Write-Host "  - Otherwise rebuild:  npx eas build --profile preview --platform android"
+Write-Host "================================================================="
