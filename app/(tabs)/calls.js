@@ -16,7 +16,7 @@ function fmtDuration(s) {
   return m + ':' + String(sec).padStart(2,'0')
 }
 
-function CallRow({ item }) {
+function CallRow({ item, onCall }) {
   const isVideo = item.type === 'video'
   const dirColor = item.status === 'missed' ? colors.danger
                 : item.direction === 'out'  ? colors.brand
@@ -33,7 +33,7 @@ function CallRow({ item }) {
           <Text style={styles.meta}>{fmtTime(item.created_at)}{item.duration ? '  -  ' + fmtDuration(item.duration) : ''}</Text>
         </View>
       </View>
-      <TouchableOpacity style={styles.callBtn}>
+      <TouchableOpacity style={styles.callBtn} onPress={() => onCall && onCall(item)}>
         {isVideo ? <VideoIcon size={22} color={colors.brand} /> : <PhoneIcon size={22} color={colors.brand} />}
       </TouchableOpacity>
     </View>
@@ -41,6 +41,7 @@ function CallRow({ item }) {
 }
 
 export default function CallsScreen() {
+  const call = useCall()
   const [calls, setCalls] = useState([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -64,7 +65,7 @@ export default function CallsScreen() {
       <FlatList
         data={calls}
         keyExtractor={(item, i) => item.id || String(i)}
-        renderItem={CallRow}
+        renderItem={({ item }) => <CallRow item={item} onCall={(c) => call?.startCall(c.peer_id, c.peer_name, c.type)} />}
         ItemSeparatorComponent={() => <View style={styles.divider} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />}
         ListEmptyComponent={

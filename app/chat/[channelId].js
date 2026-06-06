@@ -11,6 +11,8 @@ import useChatStore from '@/store/chatStore'
 import { getSocket } from '@/lib/socket'
 import api from '@/lib/api'
 import { colors, radius } from '@/lib/theme'
+import { useCall } from '@/context/CallContext'
+import { useGroupCall } from '@/context/GroupCallContext'
 import { BackIcon, AttachIcon, SendIcon, PhoneIcon, VideoIcon, SmileIcon } from '@/components/icons'
 import MessageBubble from '@/components/MessageBubble'
 
@@ -115,6 +117,23 @@ export default function ChatScreen() {
     }
   }
 
+  const call = useCall()
+  const groupCall = useGroupCall()
+  // duplicate isDM removed
+  
+  const dmPeer = isDM ? null : null  // computed below; mobile DM peer best-effort
+
+  const handleCall = (type) => {
+    if (channel?.type === 'dm') {
+      // For DM, use channel.dm_user_id (provided by API) as peer id
+      const peerId = channel.dm_user_id || channel.peer_id
+      if (!peerId) { Alert.alert('Cannot call', 'Peer id not available'); return }
+      call?.startCall(peerId, channel.name, type)
+    } else {
+      groupCall?.startCall(channelId, type)
+    }
+  }
+
   const subtitle = typingInChannel.length > 0
     ? 'typing...'
     : isDM ? 'online' : `${members?.length || 0} members`
@@ -129,8 +148,8 @@ export default function ChatScreen() {
           <Text style={styles.title} numberOfLines={1}>{channel?.name || 'Chat'}</Text>
           <Text style={[styles.subtitle, typingInChannel.length > 0 && { color: colors.brand }]} numberOfLines={1}>{subtitle}</Text>
         </View>
-        <TouchableOpacity style={styles.iconBtn} onPress={() => Alert.alert('Coming soon', 'Voice calls arrive in Phase 2')}><PhoneIcon color={colors.textPrimary} /></TouchableOpacity>
-        <TouchableOpacity style={styles.iconBtn} onPress={() => Alert.alert('Coming soon', 'Video calls arrive in Phase 2')}><VideoIcon color={colors.textPrimary} /></TouchableOpacity>
+        <TouchableOpacity style={styles.iconBtn} onPress={() => handleCall('audio')}><PhoneIcon color={colors.textPrimary} /></TouchableOpacity>
+        <TouchableOpacity style={styles.iconBtn} onPress={() => handleCall('video')}><VideoIcon color={colors.textPrimary} /></TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>

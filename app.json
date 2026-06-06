@@ -1,60 +1,81 @@
 {
-  "expo": {
-    "name": "10x Chat",
-    "slug": "10x-chat",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0f1117"
-    },
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.tenxdigitalventures.chat",
-      "buildNumber": "1"
-    },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0f1117"
-      },
-      "package": "com.tenxdigitalventures.chat",
-      "versionCode": 1,
-      "permissions": [
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE",
-        "CAMERA",
-        "RECORD_AUDIO",
-        "RECEIVE_BOOT_COMPLETED",
-        "VIBRATE"
-      ]
-    },
-    "web": {
-      "bundler": "metro"
-    },
-    "plugins": [
-      "expo-router",
-      "expo-secure-store",
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/icon.png",
-          "color": "#1db791"
-        }
-      ]
-    ],
-    "scheme": "tenxchat",
-    "extra": {
-      "apiUrl": "https://api.10xdigitalventures.com/api",
-      "socketUrl": "https://api.10xdigitalventures.com",
-      "eas": {
-        "projectId": "d092426e-5c90-4df6-94bb-5c7ad313cb61"
-      },
-      "router": {}
-    },
-    "owner": "abaanshujats-organization"
-  }
+    "expo":  {
+                 "name":  "10x Chat",
+                 "slug":  "10x-chat",
+                 "version":  "1.0.0",
+                 "orientation":  "portrait",
+                 "icon":  "./assets/icon.png",
+                 "userInterfaceStyle":  "dark",
+                 "splash":  {
+                                "image":  "./assets/splash.png",
+                                "resizeMode":  "contain",
+                                "backgroundColor":  "#0f1117"
+                            },
+                 "ios":  {
+                             "supportsTablet":  true,
+                             "bundleIdentifier":  "com.tenxdigitalventures.chat",
+                             "buildNumber":  "1"
+                         },
+                 "android":  {
+                                 "adaptiveIcon":  {
+                                                      "foregroundImage":  "./assets/adaptive-icon.png",
+                                                      "backgroundColor":  "#0f1117"
+                                                  },
+                                 "package":  "com.tenxdigitalventures.chat",
+                                 "versionCode":  1,
+                                 "edgeToEdgeEnabled":  true,
+                                 "softwareKeyboardLayoutMode":  "pan",
+                                 "permissions":  [
+                                                     "READ_EXTERNAL_STORAGE",
+                                                     "WRITE_EXTERNAL_STORAGE",
+                                                     "CAMERA",
+                                                     "RECORD_AUDIO",
+                                                     "RECEIVE_BOOT_COMPLETED",
+                                                     "VIBRATE",
+                                                     "MODIFY_AUDIO_SETTINGS",
+                                                     "BLUETOOTH_CONNECT",
+                                                     "WAKE_LOCK",
+                                                     "FOREGROUND_SERVICE"
+                                                 ]
+                             },
+                 "web":  {
+                             "bundler":  "metro"
+                         },
+                 "scheme":  "tenxchat",
+                 "extra":  {
+                               "apiUrl":  "https://api.10xdigitalventures.com/api",
+                               "socketUrl":  "https://api.10xdigitalventures.com",
+                               "eas":  {
+                                           "projectId":  "d092426e-5c90-4df6-94bb-5c7ad313cb61"
+                                       },
+                               "router":  {
+
+                                          }
+                           },
+                 "owner":  "abaanshujats-organization",
+                 "plugins":  [
+                                 "expo-router",
+                                 "expo-secure-store",
+                                 [
+                                     "expo-notifications",
+                                     {
+                                         "icon":  "./assets/icon.png",
+                                         "color":  "#1db791"
+                                     }
+                                 ],
+                                 [
+                                     "expo-camera",
+                                     {
+                                         "cameraPermission":  "Allow 10x Chat to access your camera for video calls"
+                                     }
+                                 ],
+                                 [
+                                     "@config-plugins/react-native-webrtc",
+                                     {
+                                         "cameraPermission":  "Allow 10x Chat to access your camera for video calls",
+                                         "microphonePermission":  "Allow 10x Chat to access your microphone for calls"
+                                     }
+                                 ]
+                             ]
+             }
 }

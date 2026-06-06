@@ -1,4 +1,5 @@
 import { Tabs } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useEffect } from 'react'
 import * as SecureStore from 'expo-secure-store'
 import { useRouter } from 'expo-router'
@@ -9,6 +10,7 @@ import { colors } from '@/lib/theme'
 import { ChatIcon, PhoneIcon, GroupIcon, SettingsIcon } from '@/components/icons'
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets()
   const router = useRouter()
   const {
     setUser, setChannels, addChannel, addMessage, updateMessage, deleteMessage,
@@ -47,7 +49,7 @@ export default function TabsLayout() {
   return (
     <Tabs screenOptions={{
       headerShown: false,
-      tabBarStyle: { backgroundColor: colors.bgSurface, borderTopColor: colors.bgDivider, borderTopWidth: 0.5, height: 60, paddingTop: 6, paddingBottom: 8 },
+      tabBarStyle: { backgroundColor: colors.bgSurface, borderTopColor: colors.bgDivider, borderTopWidth: 0.5, height: 60 + insets.bottom, paddingTop: 6, paddingBottom: Math.max(insets.bottom, 8) },
       tabBarActiveTintColor: colors.brand,
       tabBarInactiveTintColor: colors.textSecondary,
       tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
