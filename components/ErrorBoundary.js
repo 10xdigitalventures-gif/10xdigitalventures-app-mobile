@@ -5,8 +5,7 @@ import { saveCrash } from '@/lib/cache'
 let DevSettings = null
 try { DevSettings = require('react-native').DevSettings } catch (e) { DevSettings = null }
 
-let Updates = null
-try { Updates = require('expo-updates') } catch (e) { Updates = null }
+// expo-updates removed to fix gradle dependency conflict; using DevSettings fallback
 
 export default class ErrorBoundary extends React.Component {
   state = { hasError: false, error: null, info: null }
@@ -30,7 +29,7 @@ export default class ErrorBoundary extends React.Component {
 
   reload = async () => {
     try {
-      if (Updates?.reloadAsync) { await Updates.reloadAsync(); return }
+      // (Updates.reloadAsync disabled)
     } catch (e) {}
     try {
       if (DevSettings?.reload) { DevSettings.reload(); return }
