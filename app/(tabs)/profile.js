@@ -9,6 +9,7 @@ import * as SecureStore from 'expo-secure-store'
 import useChatStore from '@/store/chatStore'
 import api from '@/lib/api'
 import { disconnectSocket } from '@/lib/socket'
+import { loadCrash, clearCrash } from '@/lib/cache'
 import { colors } from '@/lib/theme'
 import { LogoutIcon } from '@/components/icons'
 
@@ -95,6 +96,21 @@ export default function ProfileScreen() {
           <Text style={styles.linkRight}>{'>'}</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity style={styles.linkRow} onPress={async () => {
+          const c = await loadCrash()
+          if (!c) { Alert.alert('No crash report', 'Looks good - no recent crashes.'); return }
+          Alert.alert(
+            'Last crash (' + (c.ts || 'unknown time') + ')',
+            (c.message || '') + '\n\n' + (c.stack || '').slice(0, 800),
+            [
+              { text: 'Clear', onPress: () => clearCrash() },
+              { text: 'Close', style: 'cancel' },
+            ]
+          )
+        }}>
+          <Text style={styles.linkText}>View last crash report</Text>
+          <Text style={styles.linkRight}>{'>'}</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={[styles.linkRow, { marginTop: 20 }]} onPress={logout}>
           <LogoutIcon color={colors.danger} />
           <Text style={[styles.linkText, { color: colors.danger, marginLeft: 8 }]}>Log out</Text>

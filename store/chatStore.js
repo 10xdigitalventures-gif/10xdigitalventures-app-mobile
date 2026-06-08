@@ -120,18 +120,10 @@ const useChatStore = create((set, get) => ({
     return { messages: { ...s.messages, [channelId]: next } }
   }),
 
-  // Hydrate from cache on app start (no save -- just load)
   hydrate: (data) => set((s) => ({
     user: data?.user || s.user,
     channels: Array.isArray(data?.channels) ? data.channels : s.channels,
-    messages: data?.messages && typeof data.messages === 'object' ? { ...s.messages, ...data.messages } : s.messages,
   })),
-
-  // Lazy-load a channel's cached messages into the store
-  hydrateChannelMessages: (channelId, msgs) => set((s) => {
-    if (s.messages[channelId] && s.messages[channelId].length > 0) return {}
-    return { messages: { ...s.messages, [channelId]: toArray(msgs).map(normalizeMsg) } }
-  }),
 
   setUserOnline: (userId) => set((s) => {
     const o = new Set(s.onlineUsers); o.add(userId); return { onlineUsers: o }

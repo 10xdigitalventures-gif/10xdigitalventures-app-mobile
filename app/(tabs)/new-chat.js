@@ -8,8 +8,7 @@ import { useRouter } from 'expo-router'
 import api from '@/lib/api'
 import useChatStore from '@/store/chatStore'
 import { colors } from '@/lib/theme'
-import { BackIcon, SearchIcon, GroupIcon } from '@/components/icons'
-import * as Haptics from '@/lib/haptics'
+import { BackIcon, SearchIcon } from '@/components/icons'
 
 export default function NewChatScreen() {
   const router = useRouter()
@@ -45,7 +44,6 @@ export default function NewChatScreen() {
 
   const startChat = async (peer) => {
     if (opening) return
-    Haptics.tapLight()
     setOpening(peer.id)
     try {
       const r = await api.post('/channels/dm/' + peer.id)
@@ -114,9 +112,7 @@ export default function NewChatScreen() {
           ListEmptyComponent={
             <View style={styles.center}>
               <Text style={styles.emptyTitle}>No contacts found</Text>
-              <Text style={styles.emptyBody}>
-                {query ? 'Try a different search.' : 'Your workspace has no other users yet.'}
-              </Text>
+              <Text style={styles.emptyBody}>{query ? 'Try a different search.' : 'Your workspace has no other users yet.'}</Text>
             </View>
           }
         />

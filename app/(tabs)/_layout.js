@@ -26,23 +26,22 @@ export default function TabsLayout() {
       const token = await SecureStore.getItemAsync('token')
       if (!token) { router.replace('/(auth)/login'); return }
 
-      // 1) Instant hydrate from offline cache (no white screen)
+      // 1) Hydrate from cache instantly (offline-safe)
       try {
         const [cachedUser, cachedChannels] = await Promise.all([loadUserCache(), loadChannelsCache()])
         hydrate({ user: cachedUser, channels: cachedChannels })
       } catch (e) {}
 
-      // 2) Fresh data from network (will overwrite cache via store setters)
+      // 2) Try fresh fetch (skip silently if offline)
       try {
         const [meRes, chRes] = await Promise.all([api.get('/auth/me'), api.get('/channels')])
         setUser(meRes.data?.data || meRes.data)
         setChannels(Array.isArray(chRes.data?.data) ? chRes.data.data : Array.isArray(chRes.data) ? chRes.data : [])
       } catch (e) {
-        // Offline / network down -- continue with cached data
-        console.log('Network init failed (offline?). Using cached data.')
+        console.log('Network init failed (using cache):', e?.message)
       }
 
-      // 3) Try socket connection regardless
+      // 3) Connect socket (skip silently if offline)
       try {
         const socket = await getSocket()
         socket.emit('join:channels')
@@ -65,7 +64,7 @@ export default function TabsLayout() {
         socket.on('typing:stop',  ({ user_id, channel_id }) => setTyping(channel_id, user_id, false))
         socket.on('channel:new',  (ch) => { addChannel(ch); socket.emit('join:channels') })
       } catch (e) {
-        console.log('Socket connect failed (offline?).')
+        console.log('Socket connect failed:', e?.message)
       }
     }
     init()
@@ -100,24 +99,15 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="calls"
-        options={{
-          title: 'Calls',
-          tabBarIcon: ({ color }) => <PhoneIcon size={24} color={color} />,
-        }}
+        options={{ title: 'Calls', tabBarIcon: ({ color }) => <PhoneIcon size={24} color={color} /> }}
       />
       <Tabs.Screen
         name="dms"
-        options={{
-          title: 'Direct',
-          tabBarIcon: ({ color }) => <GroupIcon size={24} color={color} />,
-        }}
+        options={{ title: 'Direct', tabBarIcon: ({ color }) => <GroupIcon size={24} color={color} /> }}
       />
       <Tabs.Screen
         name="profile"
-        options={{
-          title: 'Settings',
-          tabBarIcon: ({ color }) => <SettingsIcon size={24} color={color} />,
-        }}
+        options={{ title: 'Settings', tabBarIcon: ({ color }) => <SettingsIcon size={24} color={color} /> }}
       />
       <Tabs.Screen name="files" options={{ href: null }} />
       <Tabs.Screen name="new-chat" options={{ href: null }} />

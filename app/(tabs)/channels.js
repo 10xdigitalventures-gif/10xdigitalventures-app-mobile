@@ -22,7 +22,7 @@ function Avatar({ name, isGroup }) {
 }
 
 function NewSheet({ visible, onClose, onCreated, router }) {
-  const [mode, setMode] = useState(null) // null | 'channel' | 'group'
+  const [mode, setMode] = useState(null)
   const [name, setName] = useState('')
   const [allUsers, setAllUsers] = useState([])
   const [selected, setSelected] = useState(new Set())
@@ -200,12 +200,11 @@ export default function ChannelsScreen() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>No chats yet</Text>
-            <Text style={styles.emptyBody}>Tap + to start a new chat, channel, or group</Text>
+            <Text style={styles.emptyBody}>Tap the green button to start a new chat</Text>
           </View>
         }
       />
 
-      {/* Floating Action Button -- WhatsApp style */}
       <TouchableOpacity style={styles.fab} onPress={() => router.push('/(tabs)/new-chat')} activeOpacity={0.85}>
         <ChatIcon size={26} color="#fff" />
       </TouchableOpacity>
