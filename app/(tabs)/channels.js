@@ -1,7 +1,6 @@
-import { useState } from 'react'
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput,
-  Modal, Alert, ActivityIndicator, ScrollView
+  Modal, Alert, ActivityIndicator, ScrollView, RefreshControl
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
@@ -11,6 +10,16 @@ import { colors, radius } from '@/lib/theme'
 import { PlusIcon, SearchIcon, GroupIcon } from '@/components/icons'
 
 function Avatar({ name, isGroup }) {
+  const onRefresh = async () => {
+    setRefreshing(true)
+    try {
+      const r = await api.get('/channels')
+      const list = Array.isArray(r.data?.data) ? r.data.data : (Array.isArray(r.data) ? r.data : [])
+      setChannels(list)
+    } catch (e) {}
+    setRefreshing(false)
+  }
+
   return (
     <View style={[styles.avatar, isGroup && { backgroundColor: colors.bgRaised }]}>
       {isGroup
@@ -66,6 +75,16 @@ function NewSheet({ visible, onClose, onCreated }) {
     setCreating(false)
   }
 
+  const onRefresh = async () => {
+    setRefreshing(true)
+    try {
+      const r = await api.get('/channels')
+      const list = Array.isArray(r.data?.data) ? r.data.data : (Array.isArray(r.data) ? r.data : [])
+      setChannels(list)
+    } catch (e) {}
+    setRefreshing(false)
+  }
+
   return (
     <Modal transparent visible={visible} animationType="slide" onRequestClose={close}>
       <View style={styles.sheetBackdrop}>
@@ -104,7 +123,17 @@ function NewSheet({ visible, onClose, onCreated }) {
                     <ScrollView style={styles.userList}>
                       {allUsers.map(u => {
                         const on = selected.has(u.id)
-                        return (
+                        const onRefresh = async () => {
+    setRefreshing(true)
+    try {
+      const r = await api.get('/channels')
+      const list = Array.isArray(r.data?.data) ? r.data.data : (Array.isArray(r.data) ? r.data : [])
+      setChannels(list)
+    } catch (e) {}
+    setRefreshing(false)
+  }
+
+  return (
                           <TouchableOpacity key={u.id} style={styles.userRow} onPress={() => toggleUser(u.id)}>
                             <View style={styles.userAvatar}><Text style={{ color: '#fff', fontWeight: '600' }}>{(u.name || '?')[0].toUpperCase()}</Text></View>
                             <Text style={{ color: colors.textPrimary, flex: 1 }}>{u.name}</Text>
@@ -133,12 +162,23 @@ function NewSheet({ visible, onClose, onCreated }) {
 
 export default function ChannelsScreen() {
   const router = useRouter()
-  const { channels, addChannel } = useChatStore()
+  const { channels, addChannel, setChannels } = useChatStore()
+  const [refreshing, setRefreshing] = useState(false)
   const safe = Array.isArray(channels) ? channels : []
   const [showSheet, setShowSheet] = useState(false)
   const [query, setQuery] = useState('')
 
   const filtered = safe.filter(c => !query || (c.name || '').toLowerCase().includes(query.toLowerCase()))
+
+  const onRefresh = async () => {
+    setRefreshing(true)
+    try {
+      const r = await api.get('/channels')
+      const list = Array.isArray(r.data?.data) ? r.data.data : (Array.isArray(r.data) ? r.data : [])
+      setChannels(list)
+    } catch (e) {}
+    setRefreshing(false)
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -171,6 +211,7 @@ export default function ChannelsScreen() {
           </TouchableOpacity>
         )}
         ItemSeparatorComponent={() => <View style={styles.divider} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>No chats yet</Text>

@@ -12,10 +12,7 @@ import { ChatIcon, PhoneIcon, GroupIcon, SettingsIcon } from '@/components/icons
 export default function TabsLayout() {
   const insets = useSafeAreaInsets()
   const router = useRouter()
-  const {
-    setUser, setChannels, addChannel, addMessage, updateMessage, deleteMessage,
-    updateReaction, setUserOnline, setUserOffline, setTyping,
-  } = useChatStore()
+  const { setUser, setChannels, addChannel, addMessage, updateMessage, deleteMessage, updateReaction, setUserOnline, setUserOffline, setTyping, applyStatusUpdate, unreadCounts } = useChatStore()
 
   useEffect(() => {
     const init = async () => {
@@ -33,6 +30,16 @@ export default function TabsLayout() {
         socket.on('message:edited', ({ message_id, channel_id, content }) => updateMessage(channel_id, message_id, { content, is_edited: 1 }))
         socket.on('message:deleted', ({ message_id, channel_id }) => deleteMessage(channel_id, message_id))
         socket.on('reaction:updated', ({ message_id, channel_id, emoji, user_id, action }) => updateReaction(channel_id, message_id, emoji, user_id, action))
+        socket.on('message:status', ({ message_id, user_id, status }) => {
+          // We need channel_id to update -- look it up from store
+          const state = useChatStore.getState()
+          for (const cid of Object.keys(state.messages || {})) {
+            if ((state.messages[cid] || []).some(m => m.id === message_id)) {
+              applyStatusUpdate(cid, message_id, user_id, status)
+              break
+            }
+          }
+        })
         socket.on('user:online',  ({ user_id }) => setUserOnline(user_id))
         socket.on('user:offline', ({ user_id }) => setUserOffline(user_id))
         socket.on('typing:start', ({ user_id, channel_id }) => setTyping(channel_id, user_id, true))
@@ -54,7 +61,7 @@ export default function TabsLayout() {
       tabBarInactiveTintColor: colors.textSecondary,
       tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
     }}>
-      <Tabs.Screen name="channels" options={{ title: 'Chats',    tabBarIcon: ({ color }) => <ChatIcon     size={24} color={color} /> }} />
+      <Tabs.Screen name="channels" options={{ title: 'Chats',    tabBarIcon: ({ color }) => <ChatIcon     size={24} color={color} />, tabBarBadge: unreadTotal > 0 ? unreadTotal : undefined, tabBarBadgeStyle: { backgroundColor: colors.danger, color: '#fff', fontSize: 10 } }} />
       <Tabs.Screen name="calls"    options={{ title: 'Calls',    tabBarIcon: ({ color }) => <PhoneIcon    size={24} color={color} /> }} />
       <Tabs.Screen name="dms"      options={{ title: 'Direct',   tabBarIcon: ({ color }) => <GroupIcon    size={24} color={color} /> }} />
       <Tabs.Screen name="profile"  options={{ title: 'Settings', tabBarIcon: ({ color }) => <SettingsIcon size={24} color={color} /> }} />
