@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { saveChannelsCache, saveMessagesCache, saveUserCache } from '@/lib/cache'
 
 function unwrap(v) { return v?.data || v }
 
@@ -24,101 +25,113 @@ const useChatStore = create((set, get) => ({
   onlineUsers: new Set(),
   typingUsers: {},
   members: [],
-  replyTo: {},          // channelId -> message being replied to
-  unreadCounts: {},     // channelId -> number
-  lastSeen: {},         // userId -> timestamp
+  replyTo: {},
+  unreadCounts: {},
+  lastSeen: {},
 
-  setUser: (user) => set({ user: unwrap(user) }),
-  setChannels: (channels) => set({ channels: toArray(channels) }),
+  setUser: (user) => {
+    const u = unwrap(user)
+    set({ user: u })
+    saveUserCache(u)
+  },
+
+  setChannels: (channels) => {
+    const list = toArray(channels)
+    set({ channels: list })
+    saveChannelsCache(list)
+  },
+
   setActiveChannel: (channel) => set({ activeChannel: channel }),
   setMembers: (members) => set({ members: toArray(members) }),
-
-  setReplyTo: (channelId, msg) => set((s) => ({
-    replyTo: { ...s.replyTo, [channelId]: msg || null }
-  })),
-
-  clearUnread: (channelId) => set((s) => ({
-    unreadCounts: { ...s.unreadCounts, [channelId]: 0 }
-  })),
-
-  setLastSeen: (userId, ts) => set((s) => ({
-    lastSeen: { ...s.lastSeen, [userId]: ts }
-  })),
+  setReplyTo: (channelId, msg) => set((s) => ({ replyTo: { ...s.replyTo, [channelId]: msg || null } })),
+  clearUnread: (channelId) => set((s) => ({ unreadCounts: { ...s.unreadCounts, [channelId]: 0 } })),
+  setLastSeen: (userId, ts) => set((s) => ({ lastSeen: { ...s.lastSeen, [userId]: ts } })),
 
   addChannel: (ch) => set((s) => {
     const channel = unwrap(ch)
     if (!channel || !channel.id) return { channels: toArray(s.channels) }
     const list = toArray(s.channels)
     const exists = list.some((c) => c.id === channel.id)
-    return {
-      channels: exists
-        ? list.map((c) => c.id === channel.id ? { ...c, ...channel } : c)
-        : [...list, channel],
-    }
+    const next = exists
+      ? list.map((c) => c.id === channel.id ? { ...c, ...channel } : c)
+      : [...list, channel]
+    saveChannelsCache(next)
+    return { channels: next }
   }),
 
-  setMessages: (channelId, msgs) => set((s) => ({
-    messages: { ...s.messages, [channelId]: toArray(msgs).map(normalizeMsg) }
-  })),
+  setMessages: (channelId, msgs) => set((s) => {
+    const norm = toArray(msgs).map(normalizeMsg)
+    saveMessagesCache(channelId, norm)
+    return { messages: { ...s.messages, [channelId]: norm } }
+  }),
 
   addMessage: (channelId, msg) => set((s) => {
-    const newMsgs = { ...s.messages, [channelId]: [...(s.messages[channelId] || []), normalizeMsg(msg)] }
+    const next = [...(s.messages[channelId] || []), normalizeMsg(msg)]
+    saveMessagesCache(channelId, next)
     const isActive = s.activeChannel?.id === channelId
     const isOwn = msg.sender_id === s.user?.id
     const inc = (!isActive && !isOwn) ? 1 : 0
     return {
-      messages: newMsgs,
+      messages: { ...s.messages, [channelId]: next },
       unreadCounts: { ...s.unreadCounts, [channelId]: (s.unreadCounts[channelId] || 0) + inc }
     }
   }),
 
-  updateMessage: (channelId, messageId, updates) => set((s) => ({
-    messages: {
-      ...s.messages,
-      [channelId]: (s.messages[channelId] || []).map((m) =>
-        m.id === messageId ? { ...m, ...updates } : m
-      ),
-    },
+  updateMessage: (channelId, messageId, updates) => set((s) => {
+    const next = (s.messages[channelId] || []).map((m) =>
+      m.id === messageId ? { ...m, ...updates } : m
+    )
+    saveMessagesCache(channelId, next)
+    return { messages: { ...s.messages, [channelId]: next } }
+  }),
+
+  deleteMessage: (channelId, messageId) => set((s) => {
+    const next = (s.messages[channelId] || []).map((m) =>
+      m.id === messageId ? { ...m, is_deleted: 1 } : m
+    )
+    saveMessagesCache(channelId, next)
+    return { messages: { ...s.messages, [channelId]: next } }
+  }),
+
+  updateReaction: (channelId, messageId, emoji, userId, action) => set((s) => {
+    const next = (s.messages[channelId] || []).map((m) => {
+      if (m.id !== messageId) return m
+      let reactions = toArray(m.reactions)
+      if (action === 'removed') reactions = reactions.filter((r) => !(r.emoji === emoji && r.user_id === userId))
+      else reactions.push({ emoji, user_id: userId })
+      return { ...m, reactions }
+    })
+    saveMessagesCache(channelId, next)
+    return { messages: { ...s.messages, [channelId]: next } }
+  }),
+
+  applyStatusUpdate: (channelId, messageId, userId, status) => set((s) => {
+    const next = (s.messages[channelId] || []).map((m) => {
+      if (m.id !== messageId) return m
+      const stats = toArray(m.status)
+      const i = stats.findIndex(x => x.user_id === userId)
+      const now = new Date().toISOString()
+      const patch = status === 'read' ? { read_at: now, delivered_at: now } : { delivered_at: now }
+      if (i === -1) stats.push({ user_id: userId, ...patch })
+      else stats[i] = { ...stats[i], ...patch }
+      return { ...m, status: stats }
+    })
+    saveMessagesCache(channelId, next)
+    return { messages: { ...s.messages, [channelId]: next } }
+  }),
+
+  // Hydrate from cache on app start (no save -- just load)
+  hydrate: (data) => set((s) => ({
+    user: data?.user || s.user,
+    channels: Array.isArray(data?.channels) ? data.channels : s.channels,
+    messages: data?.messages && typeof data.messages === 'object' ? { ...s.messages, ...data.messages } : s.messages,
   })),
 
-  deleteMessage: (channelId, messageId) => set((s) => ({
-    messages: {
-      ...s.messages,
-      [channelId]: (s.messages[channelId] || []).map((m) =>
-        m.id === messageId ? { ...m, is_deleted: 1 } : m
-      ),
-    },
-  })),
-
-  updateReaction: (channelId, messageId, emoji, userId, action) => set((s) => ({
-    messages: {
-      ...s.messages,
-      [channelId]: (s.messages[channelId] || []).map((m) => {
-        if (m.id !== messageId) return m
-        let reactions = toArray(m.reactions)
-        if (action === 'removed') reactions = reactions.filter((r) => !(r.emoji === emoji && r.user_id === userId))
-        else reactions.push({ emoji, user_id: userId })
-        return { ...m, reactions }
-      }),
-    },
-  })),
-
-  // Real-time status update from server (delivered/read echo)
-  applyStatusUpdate: (channelId, messageId, userId, status) => set((s) => ({
-    messages: {
-      ...s.messages,
-      [channelId]: (s.messages[channelId] || []).map((m) => {
-        if (m.id !== messageId) return m
-        const stats = toArray(m.status)
-        const i = stats.findIndex(x => x.user_id === userId)
-        const now = new Date().toISOString()
-        const patch = status === 'read' ? { read_at: now, delivered_at: now } : { delivered_at: now }
-        if (i === -1) stats.push({ user_id: userId, ...patch })
-        else stats[i] = { ...stats[i], ...patch }
-        return { ...m, status: stats }
-      }),
-    },
-  })),
+  // Lazy-load a channel's cached messages into the store
+  hydrateChannelMessages: (channelId, msgs) => set((s) => {
+    if (s.messages[channelId] && s.messages[channelId].length > 0) return {}
+    return { messages: { ...s.messages, [channelId]: toArray(msgs).map(normalizeMsg) } }
+  }),
 
   setUserOnline: (userId) => set((s) => {
     const o = new Set(s.onlineUsers); o.add(userId); return { onlineUsers: o }

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput,
   Modal, Alert, ActivityIndicator, ScrollView, RefreshControl
@@ -6,20 +7,11 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import useChatStore from '@/store/chatStore'
 import api from '@/lib/api'
-import { colors, radius } from '@/lib/theme'
-import { PlusIcon, SearchIcon, GroupIcon } from '@/components/icons'
+import { colors } from '@/lib/theme'
+import { PlusIcon, SearchIcon, GroupIcon, ChatIcon } from '@/components/icons'
+import { useOnlineStatus } from '@/lib/netStatus'
 
 function Avatar({ name, isGroup }) {
-  const onRefresh = async () => {
-    setRefreshing(true)
-    try {
-      const r = await api.get('/channels')
-      const list = Array.isArray(r.data?.data) ? r.data.data : (Array.isArray(r.data) ? r.data : [])
-      setChannels(list)
-    } catch (e) {}
-    setRefreshing(false)
-  }
-
   return (
     <View style={[styles.avatar, isGroup && { backgroundColor: colors.bgRaised }]}>
       {isGroup
@@ -29,8 +21,8 @@ function Avatar({ name, isGroup }) {
   )
 }
 
-function NewSheet({ visible, onClose, onCreated }) {
-  const [mode, setMode] = useState(null) // 'channel' | 'group'
+function NewSheet({ visible, onClose, onCreated, router }) {
+  const [mode, setMode] = useState(null) // null | 'channel' | 'group'
   const [name, setName] = useState('')
   const [allUsers, setAllUsers] = useState([])
   const [selected, setSelected] = useState(new Set())
@@ -75,15 +67,7 @@ function NewSheet({ visible, onClose, onCreated }) {
     setCreating(false)
   }
 
-  const onRefresh = async () => {
-    setRefreshing(true)
-    try {
-      const r = await api.get('/channels')
-      const list = Array.isArray(r.data?.data) ? r.data.data : (Array.isArray(r.data) ? r.data : [])
-      setChannels(list)
-    } catch (e) {}
-    setRefreshing(false)
-  }
+  const goNewChat = () => { close(); router.push('/(tabs)/new-chat') }
 
   return (
     <Modal transparent visible={visible} animationType="slide" onRequestClose={close}>
@@ -96,12 +80,16 @@ function NewSheet({ visible, onClose, onCreated }) {
 
           {!mode && (
             <View style={{ paddingTop: 8 }}>
+              <TouchableOpacity style={styles.choice} onPress={goNewChat}>
+                <Text style={styles.choiceLabel}>New chat (direct message)</Text>
+                <Text style={styles.choiceSub}>Start a 1-on-1 chat with someone in your workspace</Text>
+              </TouchableOpacity>
               <TouchableOpacity style={styles.choice} onPress={() => setMode('channel')}>
-                <Text style={styles.choiceLabel}>#  New Channel</Text>
+                <Text style={styles.choiceLabel}>New channel</Text>
                 <Text style={styles.choiceSub}>A public room anyone in workspace can join</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.choice} onPress={openGroup}>
-                <Text style={styles.choiceLabel}>{'\u{1F465}'}  New Group</Text>
+                <Text style={styles.choiceLabel}>New group</Text>
                 <Text style={styles.choiceSub}>Private chat with selected members</Text>
               </TouchableOpacity>
             </View>
@@ -123,17 +111,7 @@ function NewSheet({ visible, onClose, onCreated }) {
                     <ScrollView style={styles.userList}>
                       {allUsers.map(u => {
                         const on = selected.has(u.id)
-                        const onRefresh = async () => {
-    setRefreshing(true)
-    try {
-      const r = await api.get('/channels')
-      const list = Array.isArray(r.data?.data) ? r.data.data : (Array.isArray(r.data) ? r.data : [])
-      setChannels(list)
-    } catch (e) {}
-    setRefreshing(false)
-  }
-
-  return (
+                        return (
                           <TouchableOpacity key={u.id} style={styles.userRow} onPress={() => toggleUser(u.id)}>
                             <View style={styles.userAvatar}><Text style={{ color: '#fff', fontWeight: '600' }}>{(u.name || '?')[0].toUpperCase()}</Text></View>
                             <Text style={{ color: colors.textPrimary, flex: 1 }}>{u.name}</Text>
@@ -163,10 +141,11 @@ function NewSheet({ visible, onClose, onCreated }) {
 export default function ChannelsScreen() {
   const router = useRouter()
   const { channels, addChannel, setChannels } = useChatStore()
-  const [refreshing, setRefreshing] = useState(false)
   const safe = Array.isArray(channels) ? channels : []
   const [showSheet, setShowSheet] = useState(false)
   const [query, setQuery] = useState('')
+  const [refreshing, setRefreshing] = useState(false)
+  const online = useOnlineStatus()
 
   const filtered = safe.filter(c => !query || (c.name || '').toLowerCase().includes(query.toLowerCase()))
 
@@ -187,6 +166,12 @@ export default function ChannelsScreen() {
         <TouchableOpacity style={styles.headerBtn} onPress={() => setShowSheet(true)}><PlusIcon color={colors.textPrimary} /></TouchableOpacity>
       </View>
 
+      {!online && (
+        <View style={styles.offlineBar}>
+          <Text style={styles.offlineText}>You are offline. Showing cached chats.</Text>
+        </View>
+      )}
+
       <View style={styles.searchBar}>
         <SearchIcon size={18} color={colors.textTertiary} />
         <TextInput
@@ -202,7 +187,7 @@ export default function ChannelsScreen() {
         data={filtered}
         keyExtractor={item => item.id}
         renderItem={({ item }) => (
-          <TouchableOpacity style={styles.row} onPress={() => router.push(`/chat/${item.id}`)}>
+          <TouchableOpacity style={styles.row} onPress={() => router.push('/chat/' + item.id)}>
             <Avatar name={item.name} isGroup={item.type !== 'dm'} />
             <View style={{ flex: 1 }}>
               <Text style={styles.name} numberOfLines={1}>{item.type === 'public' ? '# ' + item.name : item.name}</Text>
@@ -215,15 +200,21 @@ export default function ChannelsScreen() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>No chats yet</Text>
-            <Text style={styles.emptyBody}>Tap + to create a new channel or group</Text>
+            <Text style={styles.emptyBody}>Tap + to start a new chat, channel, or group</Text>
           </View>
         }
       />
 
+      {/* Floating Action Button -- WhatsApp style */}
+      <TouchableOpacity style={styles.fab} onPress={() => router.push('/(tabs)/new-chat')} activeOpacity={0.85}>
+        <ChatIcon size={26} color="#fff" />
+      </TouchableOpacity>
+
       <NewSheet
         visible={showSheet}
         onClose={() => setShowSheet(false)}
-        onCreated={(ch) => { addChannel(ch); router.push(`/chat/${ch.id}`) }}
+        onCreated={(ch) => { addChannel(ch); router.push('/chat/' + ch.id) }}
+        router={router}
       />
     </SafeAreaView>
   )
@@ -234,6 +225,9 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: colors.bgSurface, borderBottomWidth: 0.5, borderBottomColor: colors.bgDivider },
   headerTitle: { color: colors.textPrimary, fontSize: 22, fontWeight: '700' },
   headerBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.bgRaised, alignItems: 'center', justifyContent: 'center' },
+
+  offlineBar: { backgroundColor: colors.danger, paddingHorizontal: 14, paddingVertical: 6 },
+  offlineText: { color: '#fff', fontSize: 12, fontWeight: '600', textAlign: 'center' },
 
   searchBar: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 12, marginTop: 8, paddingHorizontal: 12, backgroundColor: colors.bgRaised, borderRadius: 20, height: 40 },
   searchInput: { flex: 1, color: colors.textPrimary, fontSize: 14 },
@@ -248,6 +242,8 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', paddingTop: 80 },
   emptyTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: '600' },
   emptyBody: { color: colors.textSecondary, fontSize: 13, marginTop: 6 },
+
+  fab: { position: 'absolute', right: 16, bottom: 16, width: 56, height: 56, borderRadius: 28, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.4, shadowOffset: { width: 0, height: 4 }, shadowRadius: 6, elevation: 6 },
 
   sheetBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   sheet: { backgroundColor: colors.bgSurface, padding: 16, paddingBottom: 32, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '85%' },

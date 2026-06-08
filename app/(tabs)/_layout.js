@@ -8,6 +8,7 @@ import { getSocket, disconnectSocket } from '@/lib/socket'
 import api from '@/lib/api'
 import { colors } from '@/lib/theme'
 import { ChatIcon, PhoneIcon, GroupIcon, SettingsIcon } from '@/components/icons'
+import { loadChannelsCache, loadUserCache } from '@/lib/cache'
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets()
@@ -15,10 +16,9 @@ export default function TabsLayout() {
   const {
     setUser, setChannels, addChannel, addMessage, updateMessage, deleteMessage,
     updateReaction, setUserOnline, setUserOffline, setTyping, applyStatusUpdate,
-    unreadCounts,
+    unreadCounts, hydrate,
   } = useChatStore()
 
-  // Compute total unread for the Chats tab badge
   const unreadTotal = Object.values(unreadCounts || {}).reduce((a, b) => a + (b || 0), 0)
 
   useEffect(() => {
@@ -26,11 +26,24 @@ export default function TabsLayout() {
       const token = await SecureStore.getItemAsync('token')
       if (!token) { router.replace('/(auth)/login'); return }
 
+      // 1) Instant hydrate from offline cache (no white screen)
+      try {
+        const [cachedUser, cachedChannels] = await Promise.all([loadUserCache(), loadChannelsCache()])
+        hydrate({ user: cachedUser, channels: cachedChannels })
+      } catch (e) {}
+
+      // 2) Fresh data from network (will overwrite cache via store setters)
       try {
         const [meRes, chRes] = await Promise.all([api.get('/auth/me'), api.get('/channels')])
         setUser(meRes.data?.data || meRes.data)
         setChannels(Array.isArray(chRes.data?.data) ? chRes.data.data : Array.isArray(chRes.data) ? chRes.data : [])
+      } catch (e) {
+        // Offline / network down -- continue with cached data
+        console.log('Network init failed (offline?). Using cached data.')
+      }
 
+      // 3) Try socket connection regardless
+      try {
         const socket = await getSocket()
         socket.emit('join:channels')
         socket.on('message:new', (msg) => addMessage(msg.channel_id, msg))
@@ -38,7 +51,6 @@ export default function TabsLayout() {
         socket.on('message:deleted', ({ message_id, channel_id }) => deleteMessage(channel_id, message_id))
         socket.on('reaction:updated', ({ message_id, channel_id, emoji, user_id, action }) => updateReaction(channel_id, message_id, emoji, user_id, action))
         socket.on('message:status', ({ message_id, user_id, status }) => {
-          // Look up the channel that contains this message id
           const state = useChatStore.getState()
           for (const cid of Object.keys(state.messages || {})) {
             if ((state.messages[cid] || []).some((m) => m.id === message_id)) {
@@ -53,7 +65,7 @@ export default function TabsLayout() {
         socket.on('typing:stop',  ({ user_id, channel_id }) => setTyping(channel_id, user_id, false))
         socket.on('channel:new',  (ch) => { addChannel(ch); socket.emit('join:channels') })
       } catch (e) {
-        router.replace('/(auth)/login')
+        console.log('Socket connect failed (offline?).')
       }
     }
     init()
@@ -107,8 +119,8 @@ export default function TabsLayout() {
           tabBarIcon: ({ color }) => <SettingsIcon size={24} color={color} />,
         }}
       />
-      {/* Hide the files tab from bottom bar; reachable from chat header */}
       <Tabs.Screen name="files" options={{ href: null }} />
+      <Tabs.Screen name="new-chat" options={{ href: null }} />
     </Tabs>
   )
 }
